@@ -55,6 +55,7 @@ class LoginView(CsrfProtectMixin, NeverCacheMixin, FormView):
     def get_context_data(self, **kwargs):
         data = super(LoginView, self).get_context_data(**kwargs)
         data['oauth_github_url'] = 'https://github.com/login/oauth/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_GITHUB_CLIENT_ID', '') + '&redirect_uri=http://' + self.http_host + '/oauth?v=github,' + self.service
+        data['oauth_weibo_url'] = 'https://api.weibo.com/oauth2/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_WEIBO_APP_KEY', '') + '&redirect_uri=http://' + self.http_host + '/oauth?v=weibo,' + self.service + '&response_type=code'
         return data
 
     def get(self, request, *args, **kwargs):
@@ -345,9 +346,15 @@ class SamlValidateView(NeverCacheMixin, View):
 
 class OAuthView(View):
     def get(self, request, *args, **kwargs):
-        arr = self.request.GET.get('v').split(',')
-        if arr[0] == 'github':
-            return self.do_github(self.request.GET.get('code'), arr[1])
+        v = self.request.GET.get('v')
+        if v:
+            arr = v.split(',')
+            print 'DEBUG: ', arr
+            if arr[0] == 'github':
+                return self.do_github(self.request.GET.get('code'), arr[1])
+            elif arr[0] == 'weibo':
+                return self.do_weibo(self.request.GET.get('code'), arr[1])
+        return HttpResponse(content='', content_type='text/plain')
 
     def do_github(self, code, service):
         url = 'https://github.com/login/oauth/access_token'
@@ -368,7 +375,7 @@ class OAuthView(View):
             response = urllib2.urlopen(url)
             html = response.read()
             data = json.loads(html)
-            username = data['login']
+            username = data['login'] + '_github'
             email = data['email']
             password = getattr(settings, 'SECRET_KEY', '')
             try:
@@ -380,3 +387,46 @@ class OAuthView(View):
             login(self.request, user)
             return redirect(service)
         return HttpResponse(content='GitHub OAuth failed', content_type='text/plain')
+
+    def do_weibo(self, code, service):
+        url = 'https://api.weibo.com/oauth2/access_token'
+        data = {
+            'grant_type': 'authorization_code',
+            'client_id': getattr(settings, 'MAMA_CAS_OAUTH_WEIBO_APP_KEY', ''),
+            'client_secret': getattr(settings, 'MAMA_CAS_OAUTH_WEIBO_APP_SECRET', ''),
+            'code': code,
+        }
+        try:
+            data = urllib.urlencode(data)
+            req = urllib2.Request(url, data, headers={'Accept': 'application/json'})
+            response = urllib2.urlopen(req)
+            result = response.read()
+            result = json.loads(result)
+            if 'access_token' in result:
+                access_token = result['access_token']
+                url = 'https://api.weibo.com/2/account/profile/email.json?access_token=' + access_token
+                response = urllib2.urlopen(url)
+                html = response.read()
+                data = json.loads(html)
+                email = data['email']
+                url = 'https://api.weibo.com/2/account/get_uid.json?access_token=' + access_token
+                response = urllib2.urlopen(url)
+                html = response.read()
+                data = json.loads(html)
+                uid = data['uid']
+                url = 'https://api.weibo.com/2/users/show.json?access_token=' + access_token + '&uid=' + uid
+                response = urllib2.urlopen(url)
+                html = response.read()
+                data = json.loads(html)
+                username = data['screen_name']
+                password = getattr(settings, 'SECRET_KEY', '')
+                try:
+                    user = User.objects.get(username=username)
+                except:
+                    user = User.objects.create_user(username, email, password)
+                    user.save()
+                user = authenticate(username=username, password=password)
+                login(self.request, user)
+                return redirect(service)
+        except:
+            return HttpResponse(content='Weibo OAuth failed', content_type='text/plain')
