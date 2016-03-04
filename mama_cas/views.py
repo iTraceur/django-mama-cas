@@ -2,6 +2,7 @@ import logging
 import urllib
 import urllib2
 import json
+import pinyin
 
 from django.conf import settings
 from django.contrib import messages
@@ -355,7 +356,7 @@ class OAuthView(View):
                 if arr[0] == 'github':
                     return self.do_github(self.request.GET.get('code'), arr[1])
                 elif arr[0] == 'qq':
-                    return self.do_qq(self.request.GET.get('code'), arr[1])
+                    return self.do_qq(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
                 elif arr[0] == 'weibo':
                     return self.do_weibo(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
         return HttpResponse(content='', content_type='text/plain')
@@ -365,14 +366,22 @@ class OAuthView(View):
         req = urllib2.Request(url, data, headers={'Accept': 'application/json'})
         response = urllib2.urlopen(req)
         result = response.read()
-        result = json.loads(result)
-        return result
+        print 'DEBUG:', result
+        try:
+            result = json.loads(result)
+            return result
+        except:
+            return result
 
     def __http_get(self, url):
         response = urllib2.urlopen(url)
         html = response.read()
-        data = json.loads(html)
-        return data
+        print 'DEBUG:', html
+        try:
+            data = json.loads(html)
+            return data
+        except:
+            return html
 
     def __sync_user(self, username, password, email):
         try:
@@ -403,7 +412,38 @@ class OAuthView(View):
             return redirect(service)
         return HttpResponse(content='GitHub OAuth failed', content_type='text/plain')
 
-    def do_qq(self, code, service):
+    def do_qq(self, code, host, service):
+        url = 'https://graph.qq.com/oauth2.0/token'
+        data = {
+            'grant_type': 'authorization_code',
+            'client_id': getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_ID', ''),
+            'client_secret': getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_KEY', ''),
+            'code': code,
+            'redirect_uri': 'http://' + host + '/oauth?v=qq,' + service
+        }
+        result = self.__http_post(url, data)
+        access_token = ''
+        for token in result.split('&'):
+            if token.startswith('access_token='):
+                access_token = token.split('=')[1]
+                break
+        url = 'https://graph.qq.com/oauth2.0/me?access_token=' + access_token
+        data = self.__http_get(url)
+        print 'DEBUG:', data
+        if data.startswith('callback'):
+            openid = json.loads(data[10:-3])['openid']
+            print 'DEBUG:', openid
+            url = 'https://graph.qq.com/user/get_user_info?access_token=' + access_token + '&oauth_consumer_key=' + getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_ID', '') + '&openid=' + openid
+            user_info = self.__http_get(url)
+            print 'DEBUG:', user_info
+            # TODO: a lot of website do not support Chinese characters as username
+            username = pinyin.get(user_info['nickname'], format="strip")
+            if username != '':
+                username = username + '_qq'
+                email = username + '@isoft-linux.org'
+                password = getattr(settings, 'SECRET_KEY', '')
+                self.__sync_user(username, email, password)
+                return redirect(service)
         return HttpResponse(content='QQ OAuth callback does not support http://yourdomain:port', content_type='text/plain')
 
     def do_weibo(self, code, host, service):
