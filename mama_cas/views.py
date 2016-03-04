@@ -351,13 +351,37 @@ class OAuthView(View):
         if v:
             arr = v.split(',')
             print 'DEBUG:', arr
-            if arr[0] == 'github':
-                return self.do_github(self.request.GET.get('code'), arr[1])
-            elif arr[0] == 'qq':
-                return self.do_qq(self.request.GET.get('code'), arr[1])
-            elif arr[0] == 'weibo':
-                return self.do_weibo(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
+            if len(arr) == 2:
+                if arr[0] == 'github':
+                    return self.do_github(self.request.GET.get('code'), arr[1])
+                elif arr[0] == 'qq':
+                    return self.do_qq(self.request.GET.get('code'), arr[1])
+                elif arr[0] == 'weibo':
+                    return self.do_weibo(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
         return HttpResponse(content='', content_type='text/plain')
+
+    def __http_post(self, url, data):
+        data = urllib.urlencode(data)
+        req = urllib2.Request(url, data, headers={'Accept': 'application/json'})
+        response = urllib2.urlopen(req)
+        result = response.read()
+        result = json.loads(result)
+        return result
+
+    def __http_get(self, url):
+        response = urllib2.urlopen(url)
+        html = response.read()
+        data = json.loads(html)
+        return data
+
+    def __sync_user(self, username, password, email):
+        try:
+            user = User.objects.get(username=username)
+        except:
+            user = User.objects.create_user(username, email, password)
+            user.save()
+        user = authenticate(username=username, password=password)
+        login(self.request, user)
 
     def do_github(self, code, service):
         url = 'https://github.com/login/oauth/access_token'
@@ -367,27 +391,15 @@ class OAuthView(View):
             'client_secret': getattr(settings, 'MAMA_CAS_OAUTH_GITHUB_CLIENT_SECRET', ''),
             'code': code,
         }
-        data = urllib.urlencode(data)
-        req = urllib2.Request(url, data, headers={'Accept': 'application/json'})
-        response = urllib2.urlopen(req)
-        result = response.read()
-        result = json.loads(result)
+        result = self.__http_post(url, data)
         if 'access_token' in result:
             access_token = result['access_token']
-            url = 'https://api.github.com/user?access_token=%s' % (access_token)
-            response = urllib2.urlopen(url)
-            html = response.read()
-            data = json.loads(html)
+            url = 'https://api.github.com/user?access_token=' + access_token
+            data = self.__http_get(url)
             username = data['login'] + '_github'
             email = data['email']
             password = getattr(settings, 'SECRET_KEY', '')
-            try:
-                user = User.objects.get(username=username)
-            except:
-                user = User.objects.create_user(username, email, password)
-                user.save()
-            user = authenticate(username=username, password=password)
-            login(self.request, user)
+            self.__sync_user(username, password, email)
             return redirect(service)
         return HttpResponse(content='GitHub OAuth failed', content_type='text/plain')
 
@@ -403,35 +415,21 @@ class OAuthView(View):
             'code': code,
             'redirect_uri': 'http://' + host + '/oauth?v=weibo,' + service
         }
-        data = urllib.urlencode(data)
-        req = urllib2.Request(url, data, headers={'Accept': 'application/json'})
-        response = urllib2.urlopen(req)
-        result = response.read()
-        result = json.loads(result)
+        result = self.__http_post(url, data)
         print 'DEBUG:', result
         if 'access_token' in result:
             access_token = result['access_token']
             # FIXME: why email API forbidden?!
             #url = 'https://api.weibo.com/2/account/profile/email.json?access_token=' + access_token
-            #response = urllib2.urlopen(url)
-            #html = response.read()
-            #data = json.loads(html)
+            #data = self.__http_get(url)
             #print 'DEBUG:', data
             #email = data['email']
             uid = result['uid']
             url = 'https://api.weibo.com/2/users/show.json?access_token=' + access_token + '&uid=' + uid
-            response = urllib2.urlopen(url)
-            html = response.read()
-            data = json.loads(html)
-            username = data['screen_name'] + '_weibo'
+            data = self.__http_get(url)
+            username = data['name'] + '_weibo'
             email = username + '@isoft-linux.org'
             password = getattr(settings, 'SECRET_KEY', '')
-            try:
-                user = User.objects.get(username=username)
-            except:
-                user = User.objects.create_user(username, email, password)
-                user.save()
-            user = authenticate(username=username, password=password)
-            login(self.request, user)
+            self.__sync_user(username, password, email)
             return redirect(service)
         return HttpResponse(content='Weibo OAuth failed', content_type='text/plain')
