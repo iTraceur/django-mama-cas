@@ -427,7 +427,8 @@ class OAuthView(View):
             uid = result['uid']
             url = 'https://api.weibo.com/2/users/show.json?access_token=' + access_token + '&uid=' + uid
             data = self.__http_get(url)
-            username = data['name'] + '_weibo'
+            print 'DEBUG:', data
+            username = data['profile_url'] + '_weibo'
             email = username + '@isoft-linux.org'
             password = getattr(settings, 'SECRET_KEY', '')
             self.__sync_user(username, password, email)
