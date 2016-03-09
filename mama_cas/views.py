@@ -53,6 +53,8 @@ class LoginView(CsrfProtectMixin, NeverCacheMixin, FormView):
 
     def get_context_data(self, **kwargs):
         data = super(LoginView, self).get_context_data(**kwargs)
+        data['oauth_weibo_meta_content'] = getattr(settings, 'MAMA_CAS_OAUTH_WEIBO_META', '')
+        data['oauth_qq_meta_content'] = getattr(settings, 'MAMA_CAS_OAUTH_QQ_META', '')
         data['oauth_github_url'] = 'https://github.com/login/oauth/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_GITHUB_CLIENT_ID', '') + '&redirect_uri=http://' + self.http_host + '/oauth?v=github,' + self.service
         data['oauth_qq_url'] = 'https://graph.qq.com/oauth2.0/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_ID', '') + '&redirect_uri=http://' + self.http_host + '/oauth?v=qq,' + self.service + '&response_type=code&state=' + getattr(settings, 'SECRET_KEY', '')
         data['oauth_weibo_url'] = 'https://api.weibo.com/oauth2/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_WEIBO_APP_KEY', '') + '&redirect_uri=http://' + self.http_host + '/oauth?v=weibo,' + self.service + '&response_type=code&scope=email'

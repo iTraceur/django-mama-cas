@@ -26,10 +26,12 @@ MAMA_CAS_OAUTH_GITHUB_CLIENT_SECRET = ''
 ''' 去 http://connect.qq.com 申请 '''
 MAMA_CAS_OAUTH_QQ_APP_ID = ''
 MAMA_CAS_OAUTH_QQ_APP_KEY = ''
+MAMA_CAS_OAUTH_QQ_META = ''
 
 ''' 去 http://open.weibo.com 申请 '''
 MAMA_CAS_OAUTH_WEIBO_APP_KEY = ''                                        
 MAMA_CAS_OAUTH_WEIBO_APP_SECRET = ''
+MAMA_CAS_OAUTH_WEIBO_META = ''
 ```
 
 编辑 mysite/mysite/urls.py 的内容
