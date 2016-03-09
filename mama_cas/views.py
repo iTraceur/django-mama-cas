@@ -440,7 +440,7 @@ class OAuthView(View):
             username = pinyin.get(user_info['nickname'], format="strip")
             if username != '':
                 username = username + '_qq'
-                email = username + '@isoft-linux.org'
+                email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
                 password = getattr(settings, 'SECRET_KEY', '')
                 self.__sync_user(username, email, password)
                 return redirect(service)
@@ -469,7 +469,7 @@ class OAuthView(View):
             data = self.__http_get(url)
             print 'DEBUG:', data
             username = data['profile_url'] + '_weibo'
-            email = username + '@isoft-linux.org'
+            email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
             password = getattr(settings, 'SECRET_KEY', '')
             self.__sync_user(username, password, email)
             return redirect(service)
