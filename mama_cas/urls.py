@@ -13,6 +13,7 @@ from mama_cas.views import ProxyView
 from mama_cas.views import WarnView
 from mama_cas.views import SamlValidateView
 from mama_cas.views import OAuthView
+from mama_cas.views import IndexView
 
 urlpatterns = [
     url(r'^login/?$', LoginView.as_view(), name='cas_login'),
@@ -26,4 +27,5 @@ urlpatterns = [
     url(r'^warn/?$', WarnView.as_view(), name='cas_warn'),
     url(r'^samlValidate/?$', SamlValidateView.as_view(), name='cas_saml_validate'),
     url(r'^oauth/?$', OAuthView.as_view(), name='oauth'),
+    url(r'^$', IndexView.as_view(), name='index')
 ]

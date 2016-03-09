@@ -474,3 +474,9 @@ class OAuthView(View):
             self.__sync_user(username, password, email)
             return redirect(service)
         return HttpResponse(content='Weibo OAuth failed', content_type='text/plain')
+
+class IndexView(TemplateView):
+    template_name = 'mama_cas/index.html'
+
+    def get(self, request, *args, **kwargs):
+        return super(IndexView, self).get(request, *args, **kwargs)
