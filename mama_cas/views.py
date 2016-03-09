@@ -50,8 +50,6 @@ class LoginView(CsrfProtectMixin, NeverCacheMixin, FormView):
     """
     template_name = 'mama_cas/login.html'
     form_class = LoginForm
-    http_host = ''
-    service = ''
 
     def get_context_data(self, **kwargs):
         data = super(LoginView, self).get_context_data(**kwargs)
@@ -77,6 +75,9 @@ class LoginView(CsrfProtectMixin, NeverCacheMixin, FormView):
         """
         self.http_host = request.META['HTTP_HOST']
         self.service = request.GET.get('service')
+        if self.service is None:
+            self.service = getattr(settings, 'MAMA_CAS_DEFAULT_SERVICE', '')
+
         renew = to_bool(request.GET.get('renew'))
         gateway = to_bool(request.GET.get('gateway'))
 

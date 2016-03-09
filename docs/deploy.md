@@ -16,6 +16,7 @@ INSTALLED_APP = [
 
 MAMA_CAS_ATTRIBUTE_CALLBACKS = ('mama_cas.callbacks.user_info_attributes',)
 MAMA_CAS_FOLLOW_LOGOUT_URL = True
+MAMA_CAS_DEFAULT_SERVICE = "/"
 MAMA_CAS_ENABLE_SINGLE_SIGN_OUT = True
 
 ''' 在 GitHub 帐户页的 setting 里面注册 '''
