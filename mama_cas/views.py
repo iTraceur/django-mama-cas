@@ -50,14 +50,17 @@ class LoginView(CsrfProtectMixin, NeverCacheMixin, FormView):
     """
     template_name = 'mama_cas/login.html'
     form_class = LoginForm
+    scheme = 'http'
+    http_host = ''
+    path = ''
 
     def get_context_data(self, **kwargs):
         data = super(LoginView, self).get_context_data(**kwargs)
         data['oauth_weibo_meta_content'] = getattr(settings, 'MAMA_CAS_OAUTH_WEIBO_META', '')
         data['oauth_qq_meta_content'] = getattr(settings, 'MAMA_CAS_OAUTH_QQ_META', '')
-        data['oauth_github_url'] = 'https://github.com/login/oauth/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_GITHUB_CLIENT_ID', '') + '&redirect_uri=http://' + self.http_host + '/oauth?v=github,' + self.service
-        data['oauth_qq_url'] = 'https://graph.qq.com/oauth2.0/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_ID', '') + '&redirect_uri=http://' + self.http_host + '/oauth?v=qq,' + self.service + '&response_type=code&state=' + getattr(settings, 'SECRET_KEY', '')
-        data['oauth_weibo_url'] = 'https://api.weibo.com/oauth2/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_WEIBO_APP_KEY', '') + '&redirect_uri=http://' + self.http_host + '/oauth?v=weibo,' + self.service + '&response_type=code&scope=email'
+        data['oauth_github_url'] = 'https://github.com/login/oauth/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_GITHUB_CLIENT_ID', '') + '&redirect_uri=' + self.scheme + '://' + self.http_host + self.path + 'oauth?v=github,' + self.service
+        data['oauth_qq_url'] = 'https://graph.qq.com/oauth2.0/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_ID', '') + '&redirect_uri=' + self.scheme + '://' + self.http_host + self.path + 'oauth?v=qq,' + self.service + '&response_type=code&state=' + getattr(settings, 'SECRET_KEY', '')
+        data['oauth_weibo_url'] = 'https://api.weibo.com/oauth2/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_WEIBO_APP_KEY', '') + '&redirect_uri=' + self.scheme + '://' + self.http_host + self.path + 'oauth?v=weibo,' + self.service + '&response_type=code&scope=email'
         return data
 
     def get(self, request, *args, **kwargs):
@@ -75,7 +78,11 @@ class LoginView(CsrfProtectMixin, NeverCacheMixin, FormView):
            Otherwise, the user remains logged out and is forwarded to
            the specified service.
         """
+        self.scheme = request.scheme
         self.http_host = request.META['HTTP_HOST']
+        self.path = request.path
+        if self.path.endswith('login'):
+            self.path = self.path[:-5]
         self.service = request.GET.get('service')
         if self.service is None:
             self.service = getattr(settings, 'MAMA_CAS_DEFAULT_SERVICE', '')
