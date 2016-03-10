@@ -42,18 +42,6 @@ urlpatterns = [
 ]
 ```
 
-由于***Weibo***、***QQ***需要认证网站域名（GitHub就不需要！），编辑django_mama_cas的模板文件
-mama_cas/templates/mama_cas/__base.html
-
-```
-<!-- Weibo -->
-<meta property="wb:webmaster" content="" />
-<!-- QQ -->
-<meta property="qc:admins" content="" />
-```
-
-在新浪、腾讯的相关页面上会给出对应的 content 值。
-
 由于***Weibo***、***QQ***需要认证网站域名（GitHub就不需要！）在 /etc/hosts 中配置一个假域名
 
 ```
