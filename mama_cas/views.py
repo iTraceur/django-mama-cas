@@ -488,5 +488,11 @@ class OAuthView(View):
 class IndexView(TemplateView):
     template_name = 'mama_cas/index.html'
 
+    def get_context_data(self, **kwargs):
+        data = super(IndexView, self).get_context_data(**kwargs)
+        data['oauth_weibo_meta_content'] = getattr(settings, 'MAMA_CAS_OAUTH_WEIBO_META', '')
+        data['oauth_qq_meta_content'] = getattr(settings, 'MAMA_CAS_OAUTH_QQ_META', '')
+        return data
+
     def get(self, request, *args, **kwargs):
         return super(IndexView, self).get(request, *args, **kwargs)
