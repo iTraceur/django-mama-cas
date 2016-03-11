@@ -369,7 +369,7 @@ class OAuthView(View):
                     return self.do_qq(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
                 elif arr[0] == 'weibo':
                     return self.do_weibo(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
-        return HttpResponse(content='', content_type='text/plain')
+        return HttpResponse(content='Forbidden', content_type='text/plain')
 
     def __http_post(self, url, data):
         data = urllib.urlencode(data)
