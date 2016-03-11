@@ -455,7 +455,7 @@ class OAuthView(View):
                 username = username + '_qq'
                 email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
                 password = getattr(settings, 'SECRET_KEY', '')
-                self.__sync_user(username, email, password)
+                self.__sync_user(username, password, email)
                 return redirect(service)
         return HttpResponse(content='QQ OAuth callback does not support http://yourdomain:port', content_type='text/plain')
 
