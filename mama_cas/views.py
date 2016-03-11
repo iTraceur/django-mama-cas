@@ -384,14 +384,17 @@ class OAuthView(View):
             return result
 
     def __http_get(self, url):
-        response = urllib2.urlopen(url)
-        html = response.read()
-        print 'DEBUG:', html
         try:
-            data = json.loads(html)
-            return data
+            response = urllib2.urlopen(url)
+            html = response.read()
+            print 'DEBUG:', html
+            try:
+                data = json.loads(html)
+                return data
+            except:
+                return html
         except:
-            return html
+            return None
 
     def __sync_user(self, username, password, email):
         try:
@@ -478,11 +481,12 @@ class OAuthView(View):
             url = 'https://api.weibo.com/2/users/show.json?access_token=' + access_token + '&uid=' + uid
             data = self.__http_get(url)
             print 'DEBUG:', data
-            username = data['profile_url'] + '_weibo'
-            email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
-            password = getattr(settings, 'SECRET_KEY', '')
-            self.__sync_user(username, password, email)
-            return redirect(service)
+            if data:
+                username = data['profile_url'] + '_weibo'
+                email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
+                password = getattr(settings, 'SECRET_KEY', '')
+                self.__sync_user(username, password, email)
+                return redirect(service)
         return HttpResponse(content='Weibo OAuth failed', content_type='text/plain')
 
 class IndexView(TemplateView):
