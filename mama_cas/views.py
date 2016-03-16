@@ -53,6 +53,7 @@ class LoginView(CsrfProtectMixin, NeverCacheMixin, FormView):
     scheme = 'http'
     http_host = ''
     path = ''
+    service = ''
 
     def get_context_data(self, **kwargs):
         data = super(LoginView, self).get_context_data(**kwargs)
