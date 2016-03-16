@@ -403,8 +403,12 @@ class OAuthView(View):
         except:
             user = User.objects.create_user(username, email, password)
             user.save()
-        user = authenticate(username=username, password=password)
-        login(self.request, user)
+        try:
+            user = authenticate(username=username, password=password)
+            login(self.request, user)
+            return user
+        except:
+            return None
 
     def do_github(self, code, service):
         url = 'https://github.com/login/oauth/access_token'
@@ -422,8 +426,10 @@ class OAuthView(View):
             username = data['login'] + '_github'
             email = data['email']
             password = getattr(settings, 'SECRET_KEY', '')
-            self.__sync_user(username, password, email)
-            return redirect(service)
+            user = self.__sync_user(username, password, email)
+            if user:
+                st = ServiceTicket.objects.create_ticket(service=service, user=user)
+                return redirect(service, params={'ticket': st.ticket})
         return HttpResponse(content='GitHub OAuth failed', content_type='text/plain')
 
     def do_qq(self, code, host, service):
@@ -456,8 +462,10 @@ class OAuthView(View):
                 username = username + '_qq'
                 email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
                 password = getattr(settings, 'SECRET_KEY', '')
-                self.__sync_user(username, password, email)
-                return redirect(service)
+                user = self.__sync_user(username, password, email)
+                if user:
+                    st = ServiceTicket.objects.create_ticket(service=service, user=user)
+                    return redirect(service, params={'ticket': st.ticket})
         return HttpResponse(content='QQ OAuth callback does not support http://yourdomain:port', content_type='text/plain')
 
     def do_weibo(self, code, host, service):
@@ -486,8 +494,10 @@ class OAuthView(View):
                 username = data['profile_url'] + '_weibo'
                 email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
                 password = getattr(settings, 'SECRET_KEY', '')
-                self.__sync_user(username, password, email)
-                return redirect(service)
+                user = self.__sync_user(username, password, email)
+                if user:
+                    st = ServiceTicket.objects.create_ticket(service=service, user=user)
+                    return redirect(service, params={'ticket': st.ticket})
         return HttpResponse(content='Weibo OAuth failed', content_type='text/plain')
 
 class IndexView(TemplateView):
