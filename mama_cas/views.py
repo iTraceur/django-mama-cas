@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- encoding: utf-8 -*-
+
 import logging
 import urllib
 import urllib2
@@ -372,12 +375,20 @@ class OAuthView(View):
                     return self.do_weibo(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
         return HttpResponse(content='Forbidden', content_type='text/plain')
 
+    def __log(self, log):
+        pass
+        '''
+        with open("/tmp/djang_mama_cas_oauth.log", "a") as myLogFile:
+            myLogFile.write(log + "\r\n")
+        '''
+
     def __http_post(self, url, data):
         data = urllib.urlencode(data)
         req = urllib2.Request(url, data, headers={'Accept': 'application/json'})
         response = urllib2.urlopen(req)
         result = response.read()
         print 'DEBUG:', result
+        self.__log(result)
         try:
             result = json.loads(result)
             return result
@@ -389,6 +400,7 @@ class OAuthView(View):
             response = urllib2.urlopen(url)
             html = response.read()
             print 'DEBUG:', html
+            self.__log(html)
             try:
                 data = json.loads(html)
                 return data
@@ -450,23 +462,27 @@ class OAuthView(View):
         url = 'https://graph.qq.com/oauth2.0/me?access_token=' + access_token
         data = self.__http_get(url)
         print 'DEBUG:', data
+        self.__log(data)
         if data.startswith('callback'):
             openid = json.loads(data[10:-3])['openid']
             print 'DEBUG:', openid
+            self.__log(openid)
             url = 'https://graph.qq.com/user/get_user_info?access_token=' + access_token + '&oauth_consumer_key=' + getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_ID', '') + '&openid=' + openid
             user_info = self.__http_get(url)
             print 'DEBUG:', user_info
             # TODO: a lot of website do not support Chinese characters as username
-            username = pinyin.get(user_info['nickname'], format="strip")
+            username = pinyin.get_initial(user_info['nickname'], delimiter='')
             if username != '':
                 username = username + '_qq'
+                self.__log(username)
                 email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
                 password = getattr(settings, 'SECRET_KEY', '')
                 user = self.__sync_user(username, password, email)
                 if user:
                     st = ServiceTicket.objects.create_ticket(service=service, user=user)
+                    self.__log(st.ticket)
                     return redirect(service, params={'ticket': st.ticket})
-        return HttpResponse(content='QQ OAuth callback does not support http://yourdomain:port', content_type='text/plain')
+        return HttpResponse(content='QQ OAuth failed', content_type='text/plain')
 
     def do_weibo(self, code, host, service):
         url = 'https://api.weibo.com/oauth2/access_token'
