@@ -373,7 +373,7 @@ class OAuthView(View):
                     return self.do_qq(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
                 elif arr[0] == 'weibo':
                     return self.do_weibo(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
-        return HttpResponse(content='Forbidden', content_type='text/plain')
+        return HttpResponse(content='请从web应用（例如https://bugs.isoft-linux.org/）登录入口进行CAS', content_type='text/plain')
 
     def __log(self, log):
         pass
