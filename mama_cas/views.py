@@ -383,12 +383,15 @@ class OAuthView(View):
         '''
 
     def __http_post(self, url, data):
-        data = urllib.urlencode(data)
-        req = urllib2.Request(url, data, headers={'Accept': 'application/json'})
-        response = urllib2.urlopen(req)
-        result = response.read()
-        print 'DEBUG:', result
-        self.__log(result)
+        try:
+            data = urllib.urlencode(data)
+            req = urllib2.Request(url, data, headers={'Accept': 'application/json'})
+            response = urllib2.urlopen(req)
+            result = response.read()
+            print 'DEBUG:', result
+            self.__log(result)
+        except:
+            return None
         try:
             result = json.loads(result)
             return result
@@ -431,17 +434,18 @@ class OAuthView(View):
             'code': code,
         }
         result = self.__http_post(url, data)
-        if 'access_token' in result:
-            access_token = result['access_token']
-            url = 'https://api.github.com/user?access_token=' + access_token
-            data = self.__http_get(url)
-            username = data['login'] + '_github'
-            email = data['email']
-            password = getattr(settings, 'SECRET_KEY', '')
-            user = self.__sync_user(username, password, email)
-            if user:
-                st = ServiceTicket.objects.create_ticket(service=service, user=user)
-                return redirect(service, params={'ticket': st.ticket})
+        if result:
+            if 'access_token' in result:
+                access_token = result['access_token']
+                url = 'https://api.github.com/user?access_token=' + access_token
+                data = self.__http_get(url)
+                username = data['login'] + '_github'
+                email = data['email']
+                password = getattr(settings, 'SECRET_KEY', '')
+                user = self.__sync_user(username, password, email)
+                if user:
+                    st = ServiceTicket.objects.create_ticket(service=service, user=user)
+                    return redirect(service, params={'ticket': st.ticket})
         return HttpResponse(content='GitHub OAuth failed', content_type='text/plain')
 
     def do_qq(self, code, host, service):
@@ -454,34 +458,35 @@ class OAuthView(View):
             'redirect_uri': 'http://' + host + '/oauth?v=qq,' + service
         }
         result = self.__http_post(url, data)
-        access_token = ''
-        for token in result.split('&'):
-            if token.startswith('access_token='):
-                access_token = token.split('=')[1]
-                break
-        url = 'https://graph.qq.com/oauth2.0/me?access_token=' + access_token
-        data = self.__http_get(url)
-        print 'DEBUG:', data
-        self.__log(data)
-        if data.startswith('callback'):
-            openid = json.loads(data[10:-3])['openid']
-            print 'DEBUG:', openid
-            self.__log(openid)
-            url = 'https://graph.qq.com/user/get_user_info?access_token=' + access_token + '&oauth_consumer_key=' + getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_ID', '') + '&openid=' + openid
-            user_info = self.__http_get(url)
-            print 'DEBUG:', user_info
-            # TODO: a lot of website do not support Chinese characters as username
-            username = pinyin.get_initial(user_info['nickname'], delimiter='')
-            if username != '':
-                username = username + '_qq'
-                self.__log(username)
-                email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
-                password = getattr(settings, 'SECRET_KEY', '')
-                user = self.__sync_user(username, password, email)
-                if user:
-                    st = ServiceTicket.objects.create_ticket(service=service, user=user)
-                    self.__log(st.ticket)
-                    return redirect(service, params={'ticket': st.ticket})
+        if result:
+            access_token = ''
+            for token in result.split('&'):
+                if token.startswith('access_token='):
+                    access_token = token.split('=')[1]
+                    break
+            url = 'https://graph.qq.com/oauth2.0/me?access_token=' + access_token
+            data = self.__http_get(url)
+            print 'DEBUG:', data
+            self.__log(data)
+            if data.startswith('callback'):
+                openid = json.loads(data[10:-3])['openid']
+                print 'DEBUG:', openid
+                self.__log(openid)
+                url = 'https://graph.qq.com/user/get_user_info?access_token=' + access_token + '&oauth_consumer_key=' + getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_ID', '') + '&openid=' + openid
+                user_info = self.__http_get(url)
+                print 'DEBUG:', user_info
+                # TODO: a lot of website do not support Chinese characters as username
+                username = pinyin.get_initial(user_info['nickname'], delimiter='')
+                if username != '':
+                    username = username + '_qq'
+                    self.__log(username)
+                    email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
+                    password = getattr(settings, 'SECRET_KEY', '')
+                    user = self.__sync_user(username, password, email)
+                    if user:
+                        st = ServiceTicket.objects.create_ticket(service=service, user=user)
+                        self.__log(st.ticket)
+                        return redirect(service, params={'ticket': st.ticket})
         return HttpResponse(content='QQ OAuth failed', content_type='text/plain')
 
     def do_weibo(self, code, host, service):
@@ -494,26 +499,27 @@ class OAuthView(View):
             'redirect_uri': 'http://' + host + '/oauth?v=weibo,' + service
         }
         result = self.__http_post(url, data)
-        print 'DEBUG:', result
-        if 'access_token' in result:
-            access_token = result['access_token']
-            # FIXME: why email API forbidden?!
-            #url = 'https://api.weibo.com/2/account/profile/email.json?access_token=' + access_token
-            #data = self.__http_get(url)
-            #print 'DEBUG:', data
-            #email = data['email']
-            uid = result['uid']
-            url = 'https://api.weibo.com/2/users/show.json?access_token=' + access_token + '&uid=' + uid
-            data = self.__http_get(url)
-            print 'DEBUG:', data
-            if data:
-                username = data['profile_url'] + '_weibo'
-                email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
-                password = getattr(settings, 'SECRET_KEY', '')
-                user = self.__sync_user(username, password, email)
-                if user:
-                    st = ServiceTicket.objects.create_ticket(service=service, user=user)
-                    return redirect(service, params={'ticket': st.ticket})
+        if result:
+            print 'DEBUG:', result
+            if 'access_token' in result:
+                access_token = result['access_token']
+                # FIXME: why email API forbidden?!
+                #url = 'https://api.weibo.com/2/account/profile/email.json?access_token=' + access_token
+                #data = self.__http_get(url)
+                #print 'DEBUG:', data
+                #email = data['email']
+                uid = result['uid']
+                url = 'https://api.weibo.com/2/users/show.json?access_token=' + access_token + '&uid=' + uid
+                data = self.__http_get(url)
+                print 'DEBUG:', data
+                if data:
+                    username = data['profile_url'] + '_weibo'
+                    email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
+                    password = getattr(settings, 'SECRET_KEY', '')
+                    user = self.__sync_user(username, password, email)
+                    if user:
+                        st = ServiceTicket.objects.create_ticket(service=service, user=user)
+                        return redirect(service, params={'ticket': st.ticket})
         return HttpResponse(content='Weibo OAuth failed', content_type='text/plain')
 
 class IndexView(TemplateView):
