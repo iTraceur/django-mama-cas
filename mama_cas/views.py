@@ -487,7 +487,7 @@ class OAuthView(View):
                         st = ServiceTicket.objects.create_ticket(service=service, user=user)
                         self.__log(st.ticket)
                         return redirect(service, params={'ticket': st.ticket})
-        return HttpResponse(content='QQ OAuth failed', content_type='text/plain')
+        return HttpResponse(content='QQ登录失败!', content_type='text/plain')
 
     def do_weibo(self, code, host, service):
         url = 'https://api.weibo.com/oauth2/access_token'
