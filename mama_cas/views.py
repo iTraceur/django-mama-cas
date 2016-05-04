@@ -65,6 +65,7 @@ class LoginView(CsrfProtectMixin, NeverCacheMixin, FormView):
         data['oauth_github_url'] = 'https://github.com/login/oauth/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_GITHUB_CLIENT_ID', '') + '&redirect_uri=' + self.scheme + '://' + self.http_host + self.path + 'oauth?v=github,' + self.service
         data['oauth_qq_url'] = 'https://graph.qq.com/oauth2.0/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_ID', '') + '&redirect_uri=' + self.scheme + '://' + self.http_host + self.path + 'oauth?v=qq,' + self.service + '&response_type=code&state=' + getattr(settings, 'SECRET_KEY', '')
         data['oauth_weibo_url'] = 'https://api.weibo.com/oauth2/authorize?client_id=' + getattr(settings, 'MAMA_CAS_OAUTH_WEIBO_APP_KEY', '') + '&redirect_uri=' + self.scheme + '://' + self.http_host + self.path + 'oauth?v=weibo,' + self.service + '&response_type=code&scope=email'
+        data['oauth_wechat_url'] = 'https://open.weixin.qq.com/connect/qrconnect?appid=' + getattr(settings, 'MAMA_CAS_OAUTH_WECHAT_APP_ID') + '&redirect_uri=' + self.scheme + '://' + self.http_host + self.path + 'oauth?v=wechat,' + self.service + '&response_type=code&scope=snsapi_login#wechat_redirect'
         return data
 
     def get(self, request, *args, **kwargs):
@@ -373,6 +374,8 @@ class OAuthView(View):
                     return self.do_qq(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
                 elif arr[0] == 'weibo':
                     return self.do_weibo(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
+                elif arr[0] == 'wechat':
+                    return self.do_wechat(self.request.GET.get('code'), self.request.META['HTTP_HOST'], arr[1])
         return HttpResponse(content='请从web应用（例如https://bugs.isoft-linux.org/）登录入口进行CAS', content_type='text/plain')
 
     def __log(self, log):
@@ -521,6 +524,9 @@ class OAuthView(View):
                         st = ServiceTicket.objects.create_ticket(service=service, user=user)
                         return redirect(service, params={'ticket': st.ticket})
         return HttpResponse(content='Weibo OAuth failed', content_type='text/plain')
+
+    def do_wechat(self, code, host, service):
+        return HttpResponse(content='WeChat OAuth failed', content_type='text/plain')
 
 class IndexView(TemplateView):
     template_name = 'mama_cas/index.html'
