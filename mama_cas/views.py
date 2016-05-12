@@ -526,6 +526,19 @@ class OAuthView(View):
         return HttpResponse(content='Weibo OAuth failed', content_type='text/plain')
 
     def do_wechat(self, code, host, service):
+        url = 'https://api.weixin.qq.com/sns/oauth2/access_token?appid=' + getattr(settings, 'MAMA_CAS_OAUTH_WECHAT_APP_ID', '') + '&secret=' + getattr(settings, 'MAMA_CAS_OAUTH_WECHAT_APP_SECRET') + '&code=' + code + '&grant_type=authorization_code'
+        data = self.__http_get(url)
+        if data:
+            url = 'https://api.weixin.qq.com/sns/userinfo?access_token=' + data['access_token'] + '&openid=' + data['openid']
+            data = self.__http_get(url)
+            if data:
+                username = pinyin.get_initial(data['nickname'], delimiter='') + '_wechat'
+                email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
+                password = getattr(settings, 'SECRET_KEY', '')
+                user = self.__sync_user(username, password, email)
+                if user:
+                    st = ServiceTicket.objects.create_ticket(service=service, user=user)
+                    return redirect(service, params={'ticket': st.ticket})
         return HttpResponse(content='WeChat OAuth failed', content_type='text/plain')
 
 class IndexView(TemplateView):
