@@ -366,7 +366,7 @@ class OAuthView(View):
         v = self.request.GET.get('v')
         if v:
             arr = v.split(',')
-            print 'DEBUG:', arr
+            self.__log(arr)
             if len(arr) == 2:
                 if arr[0] == 'github':
                     return self.do_github(self.request.GET.get('code'), arr[1])
@@ -381,8 +381,9 @@ class OAuthView(View):
     def __log(self, log):
         pass
         '''
-        with open("/tmp/djang_mama_cas_oauth.log", "a") as myLogFile:
-            myLogFile.write(log + "\r\n")
+        print 'DEBUG:', log
+        with open("/tmp/djang_mama_cas_oauth.log", "a") as f:
+            f.write(log + "\r\n")
         '''
 
     def __http_post(self, url, data):
@@ -391,7 +392,6 @@ class OAuthView(View):
             req = urllib2.Request(url, data, headers={'Accept': 'application/json'})
             response = urllib2.urlopen(req)
             result = response.read()
-            print 'DEBUG:', result
             self.__log(result)
         except:
             return None
@@ -405,7 +405,6 @@ class OAuthView(View):
         try:
             response = urllib2.urlopen(url)
             html = response.read()
-            print 'DEBUG:', html
             self.__log(html)
             try:
                 data = json.loads(html)
@@ -469,15 +468,12 @@ class OAuthView(View):
                     break
             url = 'https://graph.qq.com/oauth2.0/me?access_token=' + access_token
             data = self.__http_get(url)
-            print 'DEBUG:', data
             self.__log(data)
             if data.startswith('callback'):
                 openid = json.loads(data[10:-3])['openid']
-                print 'DEBUG:', openid
                 self.__log(openid)
                 url = 'https://graph.qq.com/user/get_user_info?access_token=' + access_token + '&oauth_consumer_key=' + getattr(settings, 'MAMA_CAS_OAUTH_QQ_APP_ID', '') + '&openid=' + openid
                 user_info = self.__http_get(url)
-                print 'DEBUG:', user_info
                 # TODO: a lot of website do not support Chinese characters as username
                 username = pinyin.get_initial(user_info['nickname'], delimiter='')
                 if username != '':
@@ -503,18 +499,15 @@ class OAuthView(View):
         }
         result = self.__http_post(url, data)
         if result:
-            print 'DEBUG:', result
             if 'access_token' in result:
                 access_token = result['access_token']
                 # FIXME: why email API forbidden?!
                 #url = 'https://api.weibo.com/2/account/profile/email.json?access_token=' + access_token
                 #data = self.__http_get(url)
-                #print 'DEBUG:', data
                 #email = data['email']
                 uid = result['uid']
                 url = 'https://api.weibo.com/2/users/show.json?access_token=' + access_token + '&uid=' + uid
                 data = self.__http_get(url)
-                print 'DEBUG:', data
                 if data:
                     username = data['profile_url'] + '_weibo'
                     email = username + getattr(settings, 'MAMA_CAS_OAUTH_EMAIL', '')
