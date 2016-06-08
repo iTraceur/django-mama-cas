@@ -34,3 +34,21 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'mama_cas',
 )
+
+MAMA_CAS_VALID_SERVICES = [
+    {
+        'SERVICE': 'https?://.+\.example\.com',
+        'PROXY_ALLOW': True,
+        'PROXY_PATTERN': 'https://.+\.example\.com',
+        'CALLBACKS': [
+            'mama_cas.callbacks.user_name_attributes',
+        ],
+        'LOGOUT_ALLOW': True,
+        'LOGOUT_URL': 'https://example.com/logout',
+    },
+    {
+        'SERVICE': 'http://example.com',
+        'PROXY_ALLOW': False,
+        'LOGOUT_ALLOW': False,
+    }
+]
